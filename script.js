@@ -19,10 +19,10 @@ const layers = {
     maxX: 16,
     maxY: 16,
     floatX: 0.8,
-    floatY: 6,
-    floatFreq: 0.00028,
-    rotAmp: 1,
-    rotFreq: 0.00015,
+    floatY: 12,
+    floatFreq: 0.00145,
+    rotAmp: 1.5,
+    rotFreq: 0.00128,
     phase: 0,
     rotPhase: 0,
     baseScale: 1
@@ -33,12 +33,12 @@ const layers = {
     maxX: 20,
     maxY: 20,
     floatX: 0.5,
-    floatY: 3,
-    floatFreq: 0.0003,
-    rotAmp: 0.5,
-    rotFreq: 0.00017,
-    phase: 0.7,
-    rotPhase: 1,
+    floatY: 6,
+    floatFreq: 0.00162,
+    rotAmp: 1,
+    rotFreq: 0.00135,
+    phase: 0.9,
+    rotPhase: 1.1,
     baseScale: 1
   },
   purple: {
@@ -47,12 +47,12 @@ const layers = {
     maxX: 20,
     maxY: 20,
     floatX: 0.4,
-    floatY: 3,
-    floatFreq: 0.00031,
-    rotAmp: 0.5,
-    rotFreq: 0.00016,
-    phase: 1.8,
-    rotPhase: 2,
+    floatY: 6,
+    floatFreq: 0.00147,
+    rotAmp: 1,
+    rotFreq: 0.00124,
+    phase: 2.35,
+    rotPhase: 2.45,
     baseScale: 1
   }
 };
@@ -66,7 +66,7 @@ const viewport = {
 
 const pointer = { x: 0, y: 0, clientX: viewport.centerX, clientY: viewport.centerY };
 const smoothed = { x: 0, y: 0 };
-const smoothFactor = 0.04;
+const smoothFactor = 0.065;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
