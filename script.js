@@ -20,7 +20,7 @@ const layers = {
     maxY: 16,
     floatX: 0.8,
     floatY: 12,
-    floatFreq: 0.00145,
+    floatFreq: 0.00070,
     rotAmp: 1.5,
     rotFreq: 0.00128,
     phase: 0,
