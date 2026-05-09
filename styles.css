@@ -29,7 +29,7 @@ body {
   inset: 0;
   width: 100vw;
   height: 100vh;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   user-select: none;
   -webkit-user-drag: none;
@@ -49,4 +49,19 @@ body {
 #clock-gold,
 #clock-purple {
   z-index: 3;
+}
+
+#scene img {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+#scene img.pop {
+  animation: asset-pop 260ms ease-out;
+}
+
+@keyframes asset-pop {
+  0% { filter: brightness(1); }
+  35% { filter: brightness(1.14); }
+  100% { filter: brightness(1); }
 }

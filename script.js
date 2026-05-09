@@ -81,6 +81,107 @@ const updateNormalizedPointer = (clientX, clientY) => {
   pointer.y = clamp(ny, -1, 1);
 };
 
+const createInteractionState = () => ({
+  clickCount: 0,
+  clickTimer: null,
+  lockTimer: null,
+  unlocked: false,
+  dragging: false,
+  dragStartX: 0,
+  dragStartY: 0,
+  startManualX: 0,
+  startManualY: 0,
+  manualX: 0,
+  manualY: 0,
+  targetManualX: 0,
+  targetManualY: 0
+});
+
+const setupInteractions = (layer) => {
+  layer.interaction = createInteractionState();
+
+  const triggerPop = () => {
+    layer.el.classList.remove('pop');
+    void layer.el.offsetWidth;
+    layer.el.classList.add('pop');
+  };
+
+  const resetToDefault = () => {
+    const state = layer.interaction;
+    state.unlocked = false;
+    state.dragging = false;
+    state.targetManualX = 0;
+    state.targetManualY = 0;
+  };
+
+  const relockLater = () => {
+    const state = layer.interaction;
+    clearTimeout(state.lockTimer);
+    state.lockTimer = setTimeout(() => {
+      state.unlocked = false;
+      state.dragging = false;
+    }, 5000);
+  };
+
+  layer.el.addEventListener('click', () => {
+    const state = layer.interaction;
+    state.clickCount += 1;
+    triggerPop();
+
+    clearTimeout(state.clickTimer);
+    state.clickTimer = setTimeout(() => {
+      state.clickCount = 0;
+    }, 800);
+
+    if (state.clickCount === 3) {
+      state.unlocked = true;
+      state.clickCount = 0;
+      relockLater();
+      return;
+    }
+
+    if (state.clickCount === 10) {
+      state.clickCount = 0;
+      clearTimeout(state.lockTimer);
+      resetToDefault();
+    }
+  });
+
+  layer.el.addEventListener('pointerdown', (event) => {
+    const state = layer.interaction;
+    if (!state.unlocked) return;
+
+    state.dragging = true;
+    state.dragStartX = event.clientX;
+    state.dragStartY = event.clientY;
+    state.startManualX = state.targetManualX;
+    state.startManualY = state.targetManualY;
+    relockLater();
+    layer.el.setPointerCapture(event.pointerId);
+  });
+
+  layer.el.addEventListener('pointermove', (event) => {
+    const state = layer.interaction;
+    if (!state.unlocked || !state.dragging) return;
+
+    const dx = event.clientX - state.dragStartX;
+    const dy = event.clientY - state.dragStartY;
+    const limit = Math.max(layer.boundX * 2.2, 35);
+
+    state.targetManualX = clamp(state.startManualX + dx, -limit, limit);
+    state.targetManualY = clamp(state.startManualY + dy, -limit, limit);
+    relockLater();
+  });
+
+  layer.el.addEventListener('pointerup', () => {
+    layer.interaction.dragging = false;
+  });
+
+  layer.el.addEventListener('pointercancel', () => {
+    layer.interaction.dragging = false;
+  });
+};
+
 const recalcViewport = () => {
   viewport.width = window.innerWidth;
   viewport.height = window.innerHeight;
@@ -140,7 +241,11 @@ const renderLayer = (layer, now) => {
   const floatY = Math.cos(wave) * layer.floatY;
   const rot = Math.sin(now * layer.rotFreq + layer.rotPhase) * layer.rotAmp;
 
-  layer.el.style.transform = `translate3d(${(parallaxX + floatX).toFixed(2)}px, ${(parallaxY + floatY).toFixed(2)}px, 0) rotate(${rot.toFixed(2)}deg) scale(${layer.baseScale})`;
+  const state = layer.interaction;
+  state.manualX += (state.targetManualX - state.manualX) * 0.18;
+  state.manualY += (state.targetManualY - state.manualY) * 0.18;
+
+  layer.el.style.transform = `translate3d(${(parallaxX + floatX + state.manualX).toFixed(2)}px, ${(parallaxY + floatY + state.manualY).toFixed(2)}px, 0) rotate(${rot.toFixed(2)}deg) scale(${layer.baseScale})`;
 };
 
 const animate = (now) => {
@@ -155,5 +260,6 @@ const animate = (now) => {
   requestAnimationFrame(animate);
 };
 
+Object.values(layers).forEach(setupInteractions);
 recalcViewport();
 requestAnimationFrame(animate);
