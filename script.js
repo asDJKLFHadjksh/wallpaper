@@ -1,6 +1,7 @@
 const layers = {
   bg: {
     el: document.getElementById('bg'),
+    depth: 0.55,
     maxX: 10,
     maxY: 10,
     floatX: 0.6,
@@ -10,10 +11,11 @@ const layers = {
     rotFreq: 0.00012,
     phase: 0.4,
     rotPhase: 0.8,
-    scale: 1.05
+    baseScale: 1.07
   },
   char: {
     el: document.getElementById('char'),
+    depth: 0.85,
     maxX: 16,
     maxY: 16,
     floatX: 0.8,
@@ -23,10 +25,11 @@ const layers = {
     rotFreq: 0.00015,
     phase: 0,
     rotPhase: 0,
-    scale: 1
+    baseScale: 1
   },
   gold: {
     el: document.getElementById('clock-gold'),
+    depth: 1,
     maxX: 20,
     maxY: 20,
     floatX: 0.5,
@@ -36,10 +39,11 @@ const layers = {
     rotFreq: 0.00017,
     phase: 0.7,
     rotPhase: 1,
-    scale: 1
+    baseScale: 1
   },
   purple: {
     el: document.getElementById('clock-purple'),
+    depth: 1,
     maxX: 20,
     maxY: 20,
     floatX: 0.4,
@@ -49,49 +53,94 @@ const layers = {
     rotFreq: 0.00016,
     phase: 1.8,
     rotPhase: 2,
-    scale: 1
+    baseScale: 1
   }
 };
 
-const pointer = { x: 0, y: 0 };
+const viewport = {
+  width: window.innerWidth,
+  height: window.innerHeight,
+  centerX: window.innerWidth / 2,
+  centerY: window.innerHeight / 2
+};
+
+const pointer = { x: 0, y: 0, clientX: viewport.centerX, clientY: viewport.centerY };
 const smoothed = { x: 0, y: 0 };
 const smoothFactor = 0.04;
 
-const setPointerFromEvent = (clientX, clientY) => {
-  pointer.x = (clientX / window.innerWidth) * 2 - 1;
-  pointer.y = (clientY / window.innerHeight) * 2 - 1;
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const updateNormalizedPointer = (clientX, clientY) => {
+  pointer.clientX = clientX;
+  pointer.clientY = clientY;
+
+  const nx = (clientX - viewport.centerX) / (viewport.width / 2 || 1);
+  const ny = (clientY - viewport.centerY) / (viewport.height / 2 || 1);
+
+  pointer.x = clamp(nx, -1, 1);
+  pointer.y = clamp(ny, -1, 1);
+};
+
+const recalcViewport = () => {
+  viewport.width = window.innerWidth;
+  viewport.height = window.innerHeight;
+  viewport.centerX = viewport.width / 2;
+  viewport.centerY = viewport.height / 2;
+
+  updateNormalizedPointer(pointer.clientX, pointer.clientY);
+
+  const shortSide = Math.min(viewport.width, viewport.height);
+  const longSide = Math.max(viewport.width, viewport.height);
+  const ratio = longSide / (shortSide || 1);
+  const aspectBoost = clamp((ratio - 1) * 0.35, 0, 0.8);
+
+  Object.values(layers).forEach((layer) => {
+    const sizeFactor = clamp(shortSide / 900, 0.72, 1.35);
+    const depthFactor = 0.75 + layer.depth * 0.35;
+
+    layer.boundX = layer.maxX * sizeFactor * (1 + aspectBoost * depthFactor);
+    layer.boundY = layer.maxY * sizeFactor;
+  });
 };
 
 window.addEventListener('mousemove', (event) => {
-  setPointerFromEvent(event.clientX, event.clientY);
+  updateNormalizedPointer(event.clientX, event.clientY);
 }, { passive: true });
 
 window.addEventListener('touchmove', (event) => {
   const touch = event.touches[0];
   if (!touch) return;
-  setPointerFromEvent(touch.clientX, touch.clientY);
+  updateNormalizedPointer(touch.clientX, touch.clientY);
 }, { passive: true });
 
 window.addEventListener('mouseleave', () => {
-  pointer.x = 0;
-  pointer.y = 0;
+  updateNormalizedPointer(viewport.centerX, viewport.centerY);
 });
 
 window.addEventListener('blur', () => {
-  pointer.x = 0;
-  pointer.y = 0;
+  updateNormalizedPointer(viewport.centerX, viewport.centerY);
 });
 
+let resizeTicking = false;
+window.addEventListener('resize', () => {
+  if (resizeTicking) return;
+  resizeTicking = true;
+  requestAnimationFrame(() => {
+    recalcViewport();
+    resizeTicking = false;
+  });
+}, { passive: true });
+
 const renderLayer = (layer, now) => {
-  const parallaxX = smoothed.x * layer.maxX;
-  const parallaxY = smoothed.y * layer.maxY;
+  const parallaxX = smoothed.x * layer.boundX;
+  const parallaxY = smoothed.y * layer.boundY;
 
   const wave = now * layer.floatFreq + layer.phase;
   const floatX = Math.sin(wave) * layer.floatX;
   const floatY = Math.cos(wave) * layer.floatY;
   const rot = Math.sin(now * layer.rotFreq + layer.rotPhase) * layer.rotAmp;
 
-  layer.el.style.transform = `translate3d(${(parallaxX + floatX).toFixed(2)}px, ${(parallaxY + floatY).toFixed(2)}px, 0) rotate(${rot.toFixed(2)}deg) scale(${layer.scale})`;
+  layer.el.style.transform = `translate3d(${(parallaxX + floatX).toFixed(2)}px, ${(parallaxY + floatY).toFixed(2)}px, 0) rotate(${rot.toFixed(2)}deg) scale(${layer.baseScale})`;
 };
 
 const animate = (now) => {
@@ -106,4 +155,5 @@ const animate = (now) => {
   requestAnimationFrame(animate);
 };
 
+recalcViewport();
 requestAnimationFrame(animate);
